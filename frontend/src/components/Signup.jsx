@@ -1,16 +1,85 @@
-import React from 'react'
-import { Link } from 'react-router-dom'
+import React, { useState, useEffect } from 'react'
+import { Link, useNavigate } from 'react-router-dom'
 import Navbar from './Navbar'
 import { useForm } from "react-hook-form"
+import axios from "axios"
+import toast from 'react-hot-toast'
+
+// Utility function to get user data from localStorage
+const getUserFromStorage = () => {
+  try {
+    const userData = localStorage.getItem("Users")
+    return userData ? JSON.parse(userData) : null
+  } catch (error) {
+    console.error("Error parsing user data:", error)
+    return null
+  }
+}
 
 const Signup = () => {
+  const navigate = useNavigate()
+  const [isDarkMode, setIsDarkMode] = useState(false);
+
+  // Check if dark mode is active
+  useEffect(() => {
+    const checkDarkMode = () => {
+      const isDark = document.documentElement.classList.contains('dark');
+      setIsDarkMode(isDark);
+    };
+
+    checkDarkMode();
+
+    // Listen for theme changes
+    const observer = new MutationObserver(checkDarkMode);
+    observer.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ['class']
+    });
+
+    return () => observer.disconnect();
+  }, []);
+
   const {
     register,
     handleSubmit,
     formState: { errors },
   } = useForm()
 
-  const onSubmit = (data) => console.log(data)
+  const onSubmit = async(data) => {
+    const userInfo = {
+      fullname: data.fullname,
+      email: data.email,
+      password: data.password,
+    }
+    
+    try {
+      const res = await axios.post("http://localhost:4000/user/signup", userInfo)
+      console.log("Signup response:", res.data)
+      
+      if(res.data && res.data.user){
+        //alert("Account created successfully!")
+        toast.success("Account created successfully!");
+        localStorage.setItem("Users", JSON.stringify(res.data.user))
+        console.log("User data stored:", res.data.user)
+        navigate('/') // Navigate to home page after successful signup
+             } else {
+         toast.success("Account created successfully but no user data received");
+         navigate('/')
+       }
+    } catch (err) {
+      if(err.response){
+        //alert(err.response.data.message)
+        toast.error(err.response.data.message);
+        console.log(err.response.data.message)
+      }
+      else{
+        console.log(err)
+        //alert("An error occurred. Please try again.")
+        toast.error("An error occurred. Please try again.");
+      }
+    }
+  }
+
   return (
     <>
       <Navbar />
@@ -35,16 +104,16 @@ const Signup = () => {
                     Full Name
                   </label>
                   <input
-                    id="name"
-                    name="name"
+                    id="fullname"
+                    name="fullname"
                     type="text"
                     autoComplete="name"
                     required
                     className="mt-1 appearance-none relative block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 placeholder-gray-500 dark:placeholder-gray-400 text-gray-900 dark:text-white rounded-md focus:outline-none focus:ring-purple-500 focus:border-purple-500 focus:z-10 sm:text-sm bg-white dark:bg-gray-700"
                     placeholder="Enter your full name"
-                    {...register("name", { required: true })}
+                    {...register("fullname", { required: true })}
                   />
-                   {errors.name && <span className='text-sm text-red-500'> This field is required</span>}
+                   {errors.fullname && <span className='text-sm text-red-500'> This field is required</span>}
                 </div>
                 <div>
                   <label htmlFor="email" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
@@ -83,7 +152,27 @@ const Signup = () => {
               <div>
                 <button
                   type="submit"
-                  className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-purple-600 hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500 transition-colors duration-200"
+                  style={{
+                    backgroundColor: isDarkMode ? '#ec4899' : '#ef4444', // pink-500 : red-500
+                    color: 'white',
+                    width: '100%',
+                    padding: '8px 16px',
+                    borderRadius: '6px',
+                    cursor: 'pointer',
+                    transition: 'background-color 0.2s',
+                    fontWeight: '500',
+                    fontSize: '14px',
+                    border: 'none',
+                    display: 'flex',
+                    justifyContent: 'center',
+                    alignItems: 'center'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.target.style.backgroundColor = isDarkMode ? '#db2777' : '#dc2626'; // pink-600 : red-600
+                  }}
+                  onMouseLeave={(e) => {
+                    e.target.style.backgroundColor = isDarkMode ? '#ec4899' : '#ef4444'; // pink-500 : red-500
+                  }}
                 >
                   Create Account
                 </button>

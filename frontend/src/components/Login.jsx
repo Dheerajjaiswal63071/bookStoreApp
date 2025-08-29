@@ -1,16 +1,85 @@
-import React from 'react'
-import { Link } from 'react-router-dom'
+import React, { useState, useEffect } from 'react'
+import { Link, useNavigate } from 'react-router-dom'
 import Navbar from './Navbar'
 import { useForm } from "react-hook-form"
+import axios from 'axios'
+import toast from 'react-hot-toast'
+
+// Utility function to get user data from localStorage
+const getUserFromStorage = () => {
+  try {
+    const userData = localStorage.getItem("Users")
+    return userData ? JSON.parse(userData) : null
+  } catch (error) {
+    console.error("Error parsing user data:", error)
+    return null
+  }
+}
 
 const Login = () => {
+  const navigate = useNavigate()
+  const [isDarkMode, setIsDarkMode] = useState(false);
+
+  // Check if dark mode is active
+  useEffect(() => {
+    const checkDarkMode = () => {
+      const isDark = document.documentElement.classList.contains('dark');
+      setIsDarkMode(isDark);
+    };
+
+    checkDarkMode();
+
+    // Listen for theme changes
+    const observer = new MutationObserver(checkDarkMode);
+    observer.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ['class']
+    });
+
+    return () => observer.disconnect();
+  }, []);
+
   const {
     register,
     handleSubmit,
     formState: { errors },
   } = useForm()
 
-  const onSubmit = (data) => console.log(data)
+  const onSubmit = async(data) => {
+    const userInfo = {
+      email: data.email,
+      password: data.password,
+    }
+    
+    try {
+      const res = await axios.post("http://localhost:4000/user/login", userInfo)
+      console.log("Login response:", res.data)
+      
+      if(res.data && res.data.user){
+       // alert("Login successful!")
+        toast.success("Login successful!");
+        localStorage.setItem("Users", JSON.stringify(res.data.user))
+        console.log("User data stored:", res.data.user)
+        navigate('/') // Navigate to home page after successful login
+      } else {
+        //alert("Login successful but no user data received")
+        toast.success("Login successful but no user data received");
+        navigate('/')
+      }
+    } catch (err) {
+      if(err.response){
+        //alert(err.response.data.message)
+        toast.error(err.response.data.message);
+        console.log(err.response.data.message)
+      }
+      else{
+        console.log(err)
+        //alert("An error occurred. Please try again.")
+        toast.error("An error occurred. Please try again.");
+      }
+    }
+  }
+  // console.log(data)
   return (
     <>
       <Navbar />
@@ -87,7 +156,27 @@ const Login = () => {
               <div>
                 <button
                   type="submit"
-                  className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-purple-600 hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500 transition-colors duration-200"
+                  style={{
+                    backgroundColor: isDarkMode ? '#ec4899' : '#ef4444', // pink-500 : red-500
+                    color: 'white',
+                    width: '100%',
+                    padding: '8px 16px',
+                    borderRadius: '6px',
+                    cursor: 'pointer',
+                    transition: 'background-color 0.2s',
+                    fontWeight: '500',
+                    fontSize: '14px',
+                    border: 'none',
+                    display: 'flex',
+                    justifyContent: 'center',
+                    alignItems: 'center'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.target.style.backgroundColor = isDarkMode ? '#db2777' : '#dc2626'; // pink-600 : red-600
+                  }}
+                  onMouseLeave={(e) => {
+                    e.target.style.backgroundColor = isDarkMode ? '#ec4899' : '#ef4444'; // pink-500 : red-500
+                  }}
                 >
                   Sign in
                 </button>
